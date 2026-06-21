@@ -1,0 +1,18 @@
+services:
+  retlix:
+    build: .
+    image: retlix:latest
+    container_name: retlix
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persists the SQLite DB (incl. your provider credentials) + image cache.
+      # Kept on the host, never inside the image. Do NOT commit or share this dir.
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      # Optional: multilingual plots/genres via TMDB. You can also set this in the
+      # app under Settings → Language. Get a free key at themoviedb.org.
+      # - TMDB_API_KEY=your_key_here
+    restart: unless-stopped
