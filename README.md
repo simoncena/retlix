@@ -18,6 +18,16 @@ Connect one provider, pull the whole catalog into a local database, and browse &
 
 ---
 
+## 📸 Screenshots
+
+> Demo data — placeholder titles & artwork, no real content.
+
+| Home | Browse | Search |
+|:---:|:---:|:---:|
+| ![Home](docs/screenshots/home.png) | ![Browse](docs/screenshots/browse.png) | ![Search](docs/screenshots/search.png) |
+
+---
+
 ## 📑 Table of contents
 - [Features](#-features)
 - [Quick start (Docker)](#-quick-start-docker)

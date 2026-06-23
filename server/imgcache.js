@@ -7,7 +7,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const IMG_CACHE_DIR = path.join(__dirname, '..', 'data', 'image-cache');
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, '..', 'data');
+export const IMG_CACHE_DIR = path.join(DATA_DIR, 'image-cache');
 fs.mkdirSync(IMG_CACHE_DIR, { recursive: true });
 
 export function cacheFile(url) {
