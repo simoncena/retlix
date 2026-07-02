@@ -124,6 +124,12 @@ const mapLive = (c) => ({
   }),
 });
 
+const upsertEpisode = db.prepare(`
+  INSERT OR REPLACE INTO episodes
+    (series_id, season, ep_index, ep_id, episode_num, title, plot, duration, still, container_extension)
+  VALUES (@series_id, @season, @ep_index, @ep_id, @episode_num, @title, @plot, @duration, @still, @container_extension)
+`);
+
 async function runM3USync(provider, onProgress) {
   const counts = { live: 0, movie: 0, series: 0, categories: 0, enriched: 0, toEnrich: 0 };
   const emit = (stage, message, percent) => onProgress({ stage, message, percent, counts });
@@ -137,14 +143,43 @@ async function runM3USync(provider, onProgress) {
   emit('categories', `${entries.length} canali trovati`, 30);
   log(`Canali trovati: ${entries.length}`);
 
-  const { categories, content } = m3uToDb(entries);
+  const { categories, content, episodes } = m3uToDb(entries);
 
   const tx = db.transaction(() => {
-    for (const c of categories) {
-      upsertCategory.run(c);
-    }
-    for (const c of content) {
-      upsertContent.run(c);
+    for (const c of categories) upsertCategory.run(c);
+    for (const c of content) upsertContent.run(c);
+    for (const ep of episodes) {
+      // Store the M3U stream URL in a metadata table we can look up at playback
+      upsertEpisode.run({
+        series_id: ep.series_id,
+        season: ep.season,
+        ep_index: ep.ep_index,
+        ep_id: ep.ep_id,
+        episode_num: ep.episode_num,
+        title: ep.title,
+        plot: ep.plot,
+        duration: ep.duration,
+        still: ep.still,
+        container_extension: ep.container_extension,
+      });
+      // Store the episode's M3U URL as content so the stream proxy can resolve it
+      upsertContent.run({
+        type: 'series',
+        stream_id: ep.ep_id,
+        name: ep.title,
+        icon: '',
+        backdrop: '',
+        category_id: '',
+        rating: 0,
+        added: Math.floor(Date.now() / 1000),
+        container_extension: ep.container_extension,
+        epg_channel_id: '',
+        plot: '',
+        year: '',
+        genre: '',
+        tmdb: '',
+        metadata: JSON.stringify({ m3u_url: ep.m3u_url, m3u_episode: true }),
+      });
     }
   });
   tx();
@@ -155,7 +190,8 @@ async function runM3USync(provider, onProgress) {
   counts.series = content.filter((c) => c.type === 'series').length;
 
   emit('live', `${counts.live} live, ${counts.movie} film, ${counts.series} serie`, 80);
-  log(`Live: ${counts.live}, Film: ${counts.movie}, Serie: ${counts.series}`);
+  log(`Live: ${counts.live}, Film: ${counts.movie}, Serie: ${counts.series}` +
+    (episodes.length ? `, ${episodes.length} episodi` : ''));
 
   db.prepare(`
     DELETE FROM categories
