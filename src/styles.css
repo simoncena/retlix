@@ -311,6 +311,11 @@ img { display: block; }
 .field input:focus { border-color: #888; }
 .setup .btn-red { width: 100%; justify-content: center; margin-top: 6px; font-size: 16px; padding: 13px; }
 .error-box { background: #5b1216; border: 1px solid #8a1c22; color: #ffd7d9; padding: 10px 14px; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
+.setup-tabs { display: flex; gap: 0; margin-bottom: 22px; border-radius: 6px; overflow: hidden; border: 1px solid #333; }
+.setup-tab { flex: 1; padding: 10px; font-size: 14px; font-weight: 600; background: #1a1a1a; color: #888; border: none; cursor: pointer; transition: background .15s, color .15s; }
+.setup-tab.active { background: var(--red); color: #fff; }
+.setup-tab:hover:not(.active) { background: #252525; color: #ccc; }
+.field-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
 /* ---------- Sync screen ---------- */
 .sync-screen { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: grid; place-items: center; }

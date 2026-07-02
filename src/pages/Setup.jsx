@@ -8,10 +8,11 @@ export default function Setup() {
   const { refreshStatus } = useUI();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ url: '', username: '', password: '' });
+  const [mode, setMode] = useState('xtream'); // 'xtream' | 'm3u'
+  const [form, setForm] = useState({ url: '', username: '', password: '', m3u_url: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [sync, setSync] = useState(null); // {stage, message, percent, counts}
+  const [sync, setSync] = useState(null);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -20,7 +21,7 @@ export default function Setup() {
     const es = new EventSource('/api/sync');
     es.onmessage = (ev) => {
       let data; try { data = JSON.parse(ev.data); } catch { return; }
-      if (data.log !== undefined) return; // log lines are only shown in Settings
+      if (data.log !== undefined) return;
       if (data.stage === 'error') {
         setError(t('Sincronizzazione fallita:') + ' ' + (data.message || t('errore sconosciuto')));
         setSync(null);
@@ -41,7 +42,11 @@ export default function Setup() {
     setError('');
     setBusy(true);
     try {
-      await api.saveProvider(form);
+      if (mode === 'm3u') {
+        await api.saveProvider({ type: 'm3u', m3u_url: form.m3u_url });
+      } else {
+        await api.saveProvider({ type: 'xtream', url: form.url, username: form.username, password: form.password });
+      }
       startSync();
     } catch (err) {
       setError(err.message);
@@ -73,20 +78,42 @@ export default function Setup() {
     <div className="setup">
       <form className="setup-card" onSubmit={submit}>
         <div className="logo">RETLIX</div>
-        <div className="sub">{t('Collega la tua linea Xtream Codes per iniziare')}</div>
+        <div className="sub">{t('Collega la tua linea IPTV per iniziare')}</div>
+
+        <div className="setup-tabs">
+          <button type="button" className={`setup-tab${mode === 'xtream' ? ' active' : ''}`} onClick={() => setMode('xtream')}>
+            Xtream Codes
+          </button>
+          <button type="button" className={`setup-tab${mode === 'm3u' ? ' active' : ''}`} onClick={() => setMode('m3u')}>
+            M3U / M3U8
+          </button>
+        </div>
+
         {error && <div className="error-box">{error}</div>}
-        <div className="field">
-          <label>{t('URL del server')}</label>
-          <input type="text" placeholder="http://example.com:8080" value={form.url} onChange={set('url')} required />
-        </div>
-        <div className="field">
-          <label>{t('Nome utente')}</label>
-          <input type="text" placeholder={t('nome utente')} value={form.username} onChange={set('username')} autoComplete="off" required />
-        </div>
-        <div className="field">
-          <label>{t('Password')}</label>
-          <input type="password" placeholder={t('password')} value={form.password} onChange={set('password')} autoComplete="off" required />
-        </div>
+
+        {mode === 'xtream' ? (
+          <>
+            <div className="field">
+              <label>{t('URL del server')}</label>
+              <input type="text" placeholder="http://example.com:8080" value={form.url} onChange={set('url')} required />
+            </div>
+            <div className="field">
+              <label>{t('Nome utente')}</label>
+              <input type="text" placeholder={t('nome utente')} value={form.username} onChange={set('username')} autoComplete="off" required />
+            </div>
+            <div className="field">
+              <label>{t('Password')}</label>
+              <input type="password" placeholder={t('password')} value={form.password} onChange={set('password')} autoComplete="off" required />
+            </div>
+          </>
+        ) : (
+          <div className="field">
+            <label>{t('URL della playlist M3U')}</label>
+            <input type="url" placeholder="http://example.com/playlist.m3u8" value={form.m3u_url} onChange={set('m3u_url')} required />
+            <div className="field-hint">{t('Inserisci l\'URL di una playlist M3U o M3U8')}</div>
+          </div>
+        )}
+
         <button className="btn btn-red" type="submit" disabled={busy}>
           {busy ? t('Connessione…') : t('Connetti e scarica la libreria')}
         </button>

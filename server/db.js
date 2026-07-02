@@ -67,6 +67,11 @@ db.exec(`
 `);
 
 // --- migrations: series resume needs to map an episode back to its series ---
+// --- migration: provider type (xtream | m3u) ---
+const provCols = db.prepare('PRAGMA table_info(provider)').all().map((c) => c.name);
+if (!provCols.includes('type')) db.exec("ALTER TABLE provider ADD COLUMN type TEXT DEFAULT 'xtream'");
+if (!provCols.includes('m3u_url')) db.exec("ALTER TABLE provider ADD COLUMN m3u_url TEXT DEFAULT ''");
+
 const progCols = db.prepare('PRAGMA table_info(progress)').all().map((c) => c.name);
 if (!progCols.includes('parent_id')) db.exec('ALTER TABLE progress ADD COLUMN parent_id TEXT'); // series_id for episodes
 if (!progCols.includes('season')) db.exec('ALTER TABLE progress ADD COLUMN season TEXT');

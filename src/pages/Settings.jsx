@@ -103,12 +103,22 @@ export default function Settings() {
         <div className="setup-card" style={{ width: '100%', padding: 28 }}>
           <h3 style={{ marginTop: 0 }}>{t('Provider')}</h3>
           <div className="modal-facts" style={{ marginTop: 0, fontSize: 14 }}>
-            <div><b>{t('Server:')}</b> {provider?.url}</div>
-            <div><b>{t('Nome utente:')}</b> {provider?.username}</div>
-            <div><b>{t('Stato:')}</b> {ui.status || '—'}</div>
-            <div><b>{t('Scadenza:')}</b> {exp}</div>
-            <div><b>{t('Connessioni max:')}</b> {ui.max_connections || '—'}</div>
-            <div><b>{t('Ultima sincronizzazione:')}</b> {lastSync}</div>
+            {provider?.type === 'm3u' ? (
+              <>
+                <div><b>Tipo:</b> M3U / M3U8</div>
+                <div><b>URL:</b> {provider?.m3u_url}</div>
+                <div><b>{t('Ultima sincronizzazione:')}</b> {lastSync}</div>
+              </>
+            ) : (
+              <>
+                <div><b>{t('Server:')}</b> {provider?.url}</div>
+                <div><b>{t('Nome utente:')}</b> {provider?.username}</div>
+                <div><b>{t('Stato:')}</b> {ui.status || '—'}</div>
+                <div><b>{t('Scadenza:')}</b> {exp}</div>
+                <div><b>{t('Connessioni max:')}</b> {ui.max_connections || '—'}</div>
+                <div><b>{t('Ultima sincronizzazione:')}</b> {lastSync}</div>
+              </>
+            )}
           </div>
 
           <div className="sync-counts" style={{ justifyContent: 'flex-start', gap: 34, marginTop: 24 }}>
@@ -129,13 +139,20 @@ export default function Settings() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 12, marginTop: 26, flexWrap: 'wrap' }}>
-              <button className="btn btn-red" onClick={() => resync('deep')}><Icon name="download" size={16} /> {t('Scarica tutto in locale')}</button>
-              <button className="btn btn-info" onClick={() => resync('details')}><Icon name="refresh" size={16} /> {t('Aggiorna libreria')}</button>
+              {provider?.type !== 'm3u' && (
+                <>
+                  <button className="btn btn-red" onClick={() => resync('deep')}><Icon name="download" size={16} /> {t('Scarica tutto in locale')}</button>
+                  <button className="btn btn-info" onClick={() => resync('details')}><Icon name="refresh" size={16} /> {t('Aggiorna libreria')}</button>
+                </>
+              )}
+              {provider?.type === 'm3u' && (
+                <button className="btn btn-info" onClick={() => resync('details')}><Icon name="refresh" size={16} /> {t('Aggiorna playlist')}</button>
+              )}
               <button className="btn btn-info" onClick={resetContinue}><Icon name="trash" size={16} /> {t('Azzera Continua a guardare')}</button>
               <button className="btn btn-info" onClick={disconnect}>{t('Disconnetti')}</button>
             </div>
           )}
-          {!sync && (
+          {!sync && provider?.type !== 'm3u' && (
             <div style={{ color: '#777', fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
               <b>{t('Scarica tutto in locale')}</b>: {t('salva nel database trame, cast, generi, episodi, le foto del cast (IMDb) e le immagini di navigazione (poster, sfondi, locandine episodi). È il più completo ma il più lento.')}<br />
               <b>{t('Aggiorna libreria')}</b>: {t('aggiorna il catalogo e scarica in locale i dati del provider — trame, cast, regista, episodi (cercabili per attore) — senza le foto del cast e senza pre-scaricare le immagini. Molto più veloce.')}<br />

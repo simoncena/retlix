@@ -10,6 +10,7 @@ import os from 'os';
 
 import db from './db.js';
 import { createClient, UA } from './xtream.js';
+import { fetchM3U, parseM3U } from './m3u.js';
 import { runSync } from './sync.js';
 import { imdbEnrich, imdbDeep } from './imdb.js';
 import { IMG_CACHE_DIR, cacheFile, sniffImageType } from './imgcache.js';
@@ -42,6 +43,8 @@ function publicProvider(p) {
     url: p.url,
     username: p.username,
     last_sync: p.last_sync,
+    type: p.type || 'xtream',
+    m3u_url: p.m3u_url || '',
     user_info,
     server_info,
   };
@@ -96,32 +99,63 @@ app.get('/api/provider', (req, res) => {
 });
 
 app.post('/api/provider', async (req, res) => {
-  const { url, username, password } = req.body || {};
-  if (!url || !username || !password) {
-    return res.status(400).json({ error: 'url, username and password are required' });
+  const { type = 'xtream', url, username, password, m3u_url } = req.body || {};
+
+  // Clear content when switching provider type to avoid stream_id collisions
+  const prev = getProvider();
+  const switching = prev && prev.type && prev.type !== type;
+  if (switching) {
+    db.exec('DELETE FROM categories; DELETE FROM content; DELETE FROM episodes; DELETE FROM progress;');
   }
-  try {
-    const client = createClient({ url, username, password });
-    const info = await client.info();
-    if (!info || !info.user_info || String(info.user_info.auth) === '0') {
-      return res.status(401).json({ error: 'Authentication failed — check your credentials.' });
+
+  if (type === 'm3u') {
+    if (!m3u_url) return res.status(400).json({ error: 'M3U URL is required' });
+    try {
+      const text = await fetchM3U(m3u_url);
+      const entries = parseM3U(text);
+      if (!entries.length) return res.status(400).json({ error: 'No channels found in the playlist' });
+      db.prepare(`
+        INSERT INTO provider (id, url, username, password, type, m3u_url, server_info, user_info, last_sync)
+        VALUES (1, '', '', '', 'm3u', @m3u_url, '{}', @user_info, NULL)
+        ON CONFLICT(id) DO UPDATE SET
+          url='', username='', password='', type='m3u', m3u_url=excluded.m3u_url,
+          server_info='{}', user_info=excluded.user_info
+      `).run({
+        m3u_url,
+        user_info: JSON.stringify({ auth: 1, source: 'm3u', channels: entries.length }),
+      });
+      res.json({ ok: true, provider: publicProvider(getProvider()) });
+    } catch (e) {
+      res.status(502).json({ error: 'Could not fetch M3U: ' + e.message });
     }
-    db.prepare(`
-      INSERT INTO provider (id, url, username, password, server_info, user_info, last_sync)
-      VALUES (1, @url, @username, @password, @server_info, @user_info, NULL)
-      ON CONFLICT(id) DO UPDATE SET
-        url=excluded.url, username=excluded.username, password=excluded.password,
-        server_info=excluded.server_info, user_info=excluded.user_info
-    `).run({
-      url: client.base,
-      username: client.username,
-      password: client.password,
-      server_info: JSON.stringify(info.server_info || {}),
-      user_info: JSON.stringify(info.user_info || {}),
-    });
-    res.json({ ok: true, provider: publicProvider(getProvider()) });
-  } catch (e) {
-    res.status(502).json({ error: 'Could not reach provider: ' + e.message });
+  } else {
+    if (!url || !username || !password) {
+      return res.status(400).json({ error: 'url, username and password are required' });
+    }
+    try {
+      const client = createClient({ url, username, password });
+      const info = await client.info();
+      if (!info || !info.user_info || String(info.user_info.auth) === '0') {
+        return res.status(401).json({ error: 'Authentication failed — check your credentials.' });
+      }
+      db.prepare(`
+        INSERT INTO provider (id, url, username, password, type, m3u_url, server_info, user_info, last_sync)
+        VALUES (1, @url, @username, @password, 'xtream', '', @server_info, @user_info, NULL)
+        ON CONFLICT(id) DO UPDATE SET
+          url=excluded.url, username=excluded.username, password=excluded.password,
+          type='xtream', m3u_url='',
+          server_info=excluded.server_info, user_info=excluded.user_info
+      `).run({
+        url: client.base,
+        username: client.username,
+        password: client.password,
+        server_info: JSON.stringify(info.server_info || {}),
+        user_info: JSON.stringify(info.user_info || {}),
+      });
+      res.json({ ok: true, provider: publicProvider(getProvider()) });
+    } catch (e) {
+      res.status(502).json({ error: 'Could not reach provider: ' + e.message });
+    }
   }
 });
 
@@ -340,10 +374,12 @@ app.get('/api/search', (req, res) => {
 // row, so a title is only looked up once.
 async function enrichHero(item) {
   if (!item) return item;
-  const client = getClient();
+  const provider = getProvider();
+  const isM3U = provider && provider.type === 'm3u';
+  const client = isM3U ? null : getClient();
   let rawBd = item.rawBackdrop || '';
 
-  // 1) provider details
+  // 1) provider details (skip for M3U — no structured API)
   try {
     if (client && item.type === 'movie') {
       const info = await client.vodInfo(item.id).catch(() => null);
@@ -604,11 +640,13 @@ app.get('/api/detail/:type/:id', async (req, res) => {
   const row = db.prepare('SELECT * FROM content WHERE type=? AND stream_id=?').get(type, id);
   if (!row) return res.status(404).json({ error: 'Not found' });
   const base = rowToItem(row);
-  const client = getClient();
+  const provider = getProvider();
+  const isM3U = provider && provider.type === 'm3u';
+  const client = isM3U ? null : getClient();
 
   // Deep-synced titles serve from our DB. Only hit the provider when we still
   // need something (a non-enriched title, or a series whose episodes aren't stored).
-  let needProvider = !row.enriched_at;
+  let needProvider = !isM3U && !row.enriched_at;
   if (row.enriched_at && type === 'series') {
     const seasons = localSeasons(id);
     if (Object.keys(seasons).length) base.seasons = seasons;
@@ -740,6 +778,8 @@ app.get('/api/detail/:type/:id', async (req, res) => {
 
 // ---------- short EPG for live ----------
 app.get('/api/epg/:id', async (req, res) => {
+  const provider = getProvider();
+  if (!provider || provider.type === 'm3u') return res.json({ epg_listings: [] });
   const client = getClient();
   if (!client) return res.json({ epg_listings: [] });
   try {
@@ -864,11 +904,26 @@ function resolveTarget(client, type, id, ext) {
   return null;
 }
 
+function m3uStreamUrl(type, id) {
+  const row = db.prepare('SELECT metadata FROM content WHERE type=? AND stream_id=?').get(type, id);
+  if (!row || !row.metadata) return null;
+  try { return JSON.parse(row.metadata).m3u_url || null; } catch { return null; }
+}
+
 app.get('/api/stream/:type/:id', (req, res) => {
-  const client = getClient();
-  if (!client) return res.status(400).end();
-  const target = resolveTarget(client, req.params.type, req.params.id, req.query.ext);
+  const provider = getProvider();
+  if (!provider) return res.status(400).end();
+  let target;
+  if (provider.type === 'm3u') {
+    target = m3uStreamUrl(req.params.type, req.params.id);
+  } else {
+    const client = getClient();
+    if (!client) return res.status(400).end();
+    target = resolveTarget(client, req.params.type, req.params.id, req.query.ext);
+  }
   if (!target) return res.status(400).end();
+  // M3U HLS playlists should go through the HLS proxy
+  if (/\.m3u8?(\?|$)/i.test(target)) return serveHls(target, res);
   proxyStream(target, req, res);
 });
 
@@ -879,10 +934,17 @@ const HLS_CT = { '.m3u8': 'application/vnd.apple.mpegurl', '.ts': 'video/mp2t', 
 // Subtitle list + transcode-completion flag (the player adds <track>s and, once
 // done, refreshes the active subtitle so late cues from the growing .vtt appear).
 app.get('/api/hls/vod/:type/:id/tracks.json', async (req, res) => {
-  const client = getClient();
-  if (!client) return res.status(400).end();
+  const provider = getProvider();
+  if (!provider) return res.status(400).end();
   const { type, id } = req.params;
-  const target = resolveTarget(client, type, id, req.query.ext);
+  let target;
+  if (provider.type === 'm3u') {
+    target = m3uStreamUrl(type, id);
+  } else {
+    const client = getClient();
+    if (!client) return res.status(400).end();
+    target = resolveTarget(client, type, id, req.query.ext);
+  }
   if (!target || type === 'live') return res.status(400).end();
   try {
     const info = await probeInfo(target);          // duration + subs, without disturbing the session offset
@@ -894,10 +956,17 @@ app.get('/api/hls/vod/:type/:id/tracks.json', async (req, res) => {
 });
 
 app.get('/api/hls/vod/:type/:id/master.m3u8', async (req, res) => {
-  const client = getClient();
-  if (!client) return res.status(400).end();
+  const provider = getProvider();
+  if (!provider) return res.status(400).end();
   const { type, id } = req.params;
-  const target = resolveTarget(client, type, id, req.query.ext);
+  let target;
+  if (provider.type === 'm3u') {
+    target = m3uStreamUrl(type, id);
+  } else {
+    const client = getClient();
+    if (!client) return res.status(400).end();
+    target = resolveTarget(client, type, id, req.query.ext);
+  }
   if (!target || type === 'live') return res.status(400).end();
   try {
     const ss = Math.max(0, parseFloat(req.query.ss) || 0); // seek-on-demand start offset
@@ -980,6 +1049,13 @@ async function serveHls(targetUrl, res) {
   }
 }
 app.get('/api/hls/live/:id', (req, res) => {
+  const provider = getProvider();
+  if (!provider) return res.status(400).end();
+  if (provider.type === 'm3u') {
+    const target = m3uStreamUrl('live', req.params.id);
+    if (!target) return res.status(404).end();
+    return serveHls(target, res);
+  }
   const client = getClient();
   if (!client) return res.status(400).end();
   serveHls(client.liveUrl(req.params.id, 'm3u8'), res);

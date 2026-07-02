@@ -1,5 +1,6 @@
 import db from './db.js';
 import { createClient, UA } from './xtream.js';
+import { fetchM3U, parseM3U, m3uToDb } from './m3u.js';
 import { enrichMovie, enrichSeries, runPool } from './enrich.js';
 import { ensureCached } from './imgcache.js';
 
@@ -123,6 +124,55 @@ const mapLive = (c) => ({
   }),
 });
 
+async function runM3USync(provider, onProgress) {
+  const counts = { live: 0, movie: 0, series: 0, categories: 0, enriched: 0, toEnrich: 0 };
+  const emit = (stage, message, percent) => onProgress({ stage, message, percent, counts });
+  const log = (line) => { console.log('[sync] ' + line); onProgress({ log: line }); };
+
+  emit('start', 'Scarico la playlist M3U…', 5);
+  log('Sincronizzazione M3U avviata: ' + provider.m3u_url);
+
+  const text = await fetchM3U(provider.m3u_url);
+  const entries = parseM3U(text);
+  emit('categories', `${entries.length} canali trovati`, 30);
+  log(`Canali trovati: ${entries.length}`);
+
+  const { categories, content } = m3uToDb(entries);
+
+  const tx = db.transaction(() => {
+    for (const c of categories) {
+      upsertCategory.run(c);
+    }
+    for (const c of content) {
+      upsertContent.run(c);
+    }
+  });
+  tx();
+
+  counts.categories = categories.length;
+  counts.live = content.filter((c) => c.type === 'live').length;
+  counts.movie = content.filter((c) => c.type === 'movie').length;
+  counts.series = content.filter((c) => c.type === 'series').length;
+
+  emit('live', `${counts.live} live, ${counts.movie} film, ${counts.series} serie`, 80);
+  log(`Live: ${counts.live}, Film: ${counts.movie}, Serie: ${counts.series}`);
+
+  db.prepare(`
+    DELETE FROM categories
+    WHERE NOT EXISTS (
+      SELECT 1 FROM content
+      WHERE content.type = categories.type
+        AND content.category_id = categories.category_id
+    )
+  `).run();
+
+  db.prepare('UPDATE provider SET last_sync = ? WHERE id = 1').run(Math.floor(Date.now() / 1000));
+
+  emit('done', 'Libreria pronta', 100);
+  log('Fatto. Libreria pronta.');
+  return counts;
+}
+
 /**
  * Download everything from the configured provider into the DB.
  * onProgress({ stage, message, percent, counts }) is called repeatedly.
@@ -130,6 +180,8 @@ const mapLive = (c) => ({
 export async function runSync(onProgress = () => {}, opts = {}) {
   const provider = db.prepare('SELECT * FROM provider WHERE id = 1').get();
   if (!provider) throw new Error('No provider configured');
+
+  if (provider.type === 'm3u') return runM3USync(provider, onProgress);
 
   const client = createClient(provider);
   const counts = { live: 0, movie: 0, series: 0, categories: 0, enriched: 0, toEnrich: 0 };

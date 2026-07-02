@@ -2,19 +2,21 @@
 
 # 🎬 Retlix
 
-**A self-hosted, Netflix-style web app for your Xtream Codes IPTV line.**
+**A self-hosted, Netflix-style web app for your IPTV line.**
 
-Connect one provider, pull the whole catalog into a local database, and browse & watch movies, series and live TV with a slick, Netflix-grade interface — on your computer, phone, or smart-TV browser.
+Connect your **Xtream Codes** provider or any **M3U / M3U8** playlist, pull the whole catalog into a local database, and browse & watch movies, series and live TV with a slick, Netflix-grade interface — on your computer, phone, or smart-TV browser.
 
 ![Node](https://img.shields.io/badge/Node-%E2%89%A518-339933?logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 ![ffmpeg](https://img.shields.io/badge/ffmpeg-transcode-007808?logo=ffmpeg&logoColor=white)
+![Xtream](https://img.shields.io/badge/Xtream_Codes-supported-e50914)
+![M3U](https://img.shields.io/badge/M3U%2FM3U8-supported-e50914)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
 </div>
 
 > [!IMPORTANT]
-> **Bring your own legal IPTV subscription.** Retlix ships with **no** content, channels, or credentials — it's only a player for an [Xtream Codes](https://en.wikipedia.org/wiki/Xtream_Codes) line **you** already pay for. Not affiliated with Netflix. For personal use on your own network.
+> **Bring your own legal IPTV subscription.** Retlix ships with **no** content, channels, or credentials — it's only a player for an [Xtream Codes](https://en.wikipedia.org/wiki/Xtream_Codes) line or M3U/M3U8 playlist **you** already pay for. Not affiliated with Netflix. For personal use on your own network.
 
 ---
 
@@ -45,11 +47,14 @@ Connect one provider, pull the whole catalog into a local database, and browse &
 ## ✨ Features
 
 **Library**
-- One-time provider setup — paste your Xtream URL + username + password, validated on connect.
+- **Two provider types** at setup — choose between:
+  - **Xtream Codes** — paste server URL + username + password, validated on connect.
+  - **M3U / M3U8** — paste any playlist URL. Channels are auto-categorized (live, movies, series) from group tags.
 - Full catalog synced into a local **SQLite** database: categories, movies, series, live channels.
-- **Two sync modes**, both incremental, resumable, and kept running even if you close the tab:
+- **Two sync modes** (Xtream), both incremental, resumable, and kept running even if you close the tab:
   - **Update library** — provider details (plot, cast, director, episodes). Fast.
   - **Download everything locally** — adds IMDb cast photos + pre-cached artwork.
+- M3U providers get a one-click **Refresh playlist** button to re-sync.
 - On-disk **image cache** (posters, backdrops, episode stills, actor photos).
 
 **Discovery**
@@ -149,14 +154,14 @@ The SQLite DB + image cache live in **`data/`** (gitignored & dockerignored). To
 ## 🧠 How it works
 
 ```
-Xtream provider ──▶ Express backend ──▶ SQLite (local library + cache)
-       │                  │
-   TMDB / IMDb ───────────┤  enrichment (plots, genres, cast photos, i18n)
-                          │
-   browser  ◀── React UI ─┤  all streams & images are PROXIED through the
-   (hls.js / native)      │  backend, so provider credentials never reach it
-                          └─ ffmpeg ──▶ on-the-fly HLS for MKV/AVI
-                                        (video + multi-audio + WebVTT subs)
+Xtream / M3U ──────▶ Express backend ──▶ SQLite (local library + cache)
+       │                    │
+   TMDB / IMDb ─────────────┤  enrichment (plots, genres, cast photos, i18n)
+                            │
+   browser  ◀── React UI ──┤  all streams & images are PROXIED through the
+   (hls.js / native)        │  backend, so provider credentials never reach it
+                            └─ ffmpeg ──▶ on-the-fly HLS for MKV/AVI
+                                          (video + multi-audio + WebVTT subs)
 ```
 
 - **Backend** (Express + better-sqlite3): proxies every stream and image (hides credentials, avoids CORS), syncs & enriches the catalog, serves the API and the built UI.
@@ -168,7 +173,7 @@ Xtream provider ──▶ Express backend ──▶ SQLite (local library + cach
 ## 📁 Project structure
 
 ```
-server/        Express API, sync/enrichment, stream & image proxy, ffmpeg pipeline, TMDB
+server/        Express API, sync/enrichment, stream & image proxy, M3U parser, ffmpeg pipeline, TMDB
 src/           React app (pages, components, player, i18n)
 data/          SQLite DB + image cache  (created at runtime, never committed)
 Dockerfile     multi-stage build (compiles native deps, ships ffmpeg)
