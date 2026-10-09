@@ -1,19 +1,33 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 
 // Lightweight i18n (no deps). The Italian source string is the key; missing
 // translations fall back to it gracefully. Supports {name} interpolation.
 
 export const LANGUAGES = [
-  { code: 'it', label: 'Italiano' },
-  { code: 'en', label: 'English' },
   { code: 'es', label: 'Español' },
-  { code: 'fr', label: 'Français' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'pt', label: 'Português' },
+  { code: 'en', label: 'English' },
+  { code: 'it', label: 'Italiano' },
 ];
 
 const DICT = {
   en: {
+    'Idioma de la interfaz': 'Interface language',
+    'Cambia el idioma de menús, botones y mensajes.': 'Change the language of menus, buttons and messages.',
+    'Mostrar contraseña': 'Show password',
+    'Ocultar contraseña': 'Hide password',
+    'Cambio canale…': 'Changing channel…',
+    'Impossibile riprodurre questo contenuto.': 'Unable to play this content.',
+    'Connessione persa.': 'Connection lost.',
+    'CH − / CH + cambia canale': 'CH − / CH + changes channel',
+    'Pronto!': 'Ready!',
+    'Scaricamento Film…': 'Loading Movies…',
+    'Scaricamento Serie TV…': 'Loading TV Shows…',
+    'Scaricamento Live TV…': 'Loading Live TV…',
+    'Film ✓': 'Movies ✓',
+    'Serie TV ✓': 'TV Shows ✓',
+    'Live TV ✓': 'Live TV ✓',
+    'Film': 'Movies',
+    'Serie': 'Shows',
     // nav
     'Home': 'Home', 'Film': 'Movies', 'Serie TV': 'TV Shows', 'Live TV': 'Live TV',
     'Cerca': 'Search', 'Impostazioni': 'Settings', 'Live': 'Live',
@@ -104,6 +118,23 @@ const DICT = {
     'Tedesco': 'German', 'Portoghese': 'Portuguese', 'Russo': 'Russian', 'Giapponese': 'Japanese',
   },
   es: {
+    'Idioma de la interfaz': 'Idioma de la interfaz',
+    'Cambia el idioma de menús, botones y mensajes.': 'Cambia el idioma de menús, botones y mensajes.',
+    'Mostrar contraseña': 'Mostrar contraseña',
+    'Ocultar contraseña': 'Ocultar contraseña',
+    'Cambio canale…': 'Cambiando canal…',
+    'Impossibile riprodurre questo contenuto.': 'No se puede reproducir este contenido.',
+    'Connessione persa.': 'Conexión perdida.',
+    'CH − / CH + cambia canale': 'CH − / CH + cambia de canal',
+    'Pronto!': '¡Listo!',
+    'Scaricamento Film…': 'Cargando películas…',
+    'Scaricamento Serie TV…': 'Cargando series…',
+    'Scaricamento Live TV…': 'Cargando TV en directo…',
+    'Film ✓': 'Películas ✓',
+    'Serie TV ✓': 'Series ✓',
+    'Live TV ✓': 'TV en directo ✓',
+    'Film': 'Películas',
+    'Serie': 'Series',
     'Home': 'Inicio', 'Film': 'Películas', 'Serie TV': 'Series', 'Live TV': 'TV en directo',
     'Cerca': 'Buscar', 'Impostazioni': 'Ajustes', 'Live': 'Directo',
     'Aggiunti di recente': 'Añadidos recientemente', 'A → Z': 'A → Z', 'Più votati': 'Mejor valorados',
@@ -426,17 +457,21 @@ const STORE_KEY = 'retlix-lang';
 function detectLang() {
   try {
     const saved = localStorage.getItem(STORE_KEY);
-    if (saved && (saved === 'it' || DICT[saved])) return saved;
-    const nav = (navigator.language || 'it').slice(0, 2).toLowerCase();
-    if (nav === 'it' || DICT[nav]) return nav;
+    if (saved && LANGUAGES.some((l) => l.code === saved)) return saved;
+    const nav = (navigator.language || 'es').slice(0, 2).toLowerCase();
+    if (LANGUAGES.some((l) => l.code === nav)) return nav;
   } catch {}
-  return 'it';
+  return 'es';
 }
 
 const I18nContext = createContext(null);
 
 export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(detectLang);
+
+  useEffect(() => {
+    try { document.documentElement.lang = lang; } catch {}
+  }, [lang]);
 
   const setLang = useCallback((code) => {
     setLangState(code);
@@ -458,5 +493,5 @@ export function I18nProvider({ children }) {
 export function useI18n() {
   const ctx = useContext(I18nContext);
   // Fallback so components don't crash if used outside the provider (identity t).
-  return ctx || { lang: 'it', setLang: () => {}, t: (s, p) => { let o = s; if (p) for (const k in p) o = o.replaceAll(`{${k}}`, p[k]); return o; }, languages: LANGUAGES };
+  return ctx || { lang: 'es', setLang: () => {}, t: (s, p) => { let o = s; if (p) for (const k in p) o = o.replaceAll(`{${k}}`, p[k]); return o; }, languages: LANGUAGES };
 }

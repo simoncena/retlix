@@ -72,16 +72,24 @@ LEGACY=$(basename "$(ls dist/assets/index-legacy-*.js)")
 # 5) Create standalone Tizen index.html
 cat > "$OUT/index.html" << HTMLEOF
 <!DOCTYPE html>
-<html lang="it" class="tv">
+<html lang="es" class="tv">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="theme-color" content="#141414"/>
   <title>Retlix</title>
+  <script type="text/javascript" src="\$WEBAPIS/webapis/webapis.js"></script>
   <link rel="stylesheet" href="./assets/$CSS_NAME">
   <script>
     try{if(!localStorage.getItem("retlix-server"))localStorage.setItem("retlix-server","http://$IP:3000")}catch(e){}
     try{localStorage.setItem("retlix_tv","1")}catch(e){}
+    // Interface language: saved preference > TV/browser language > Spanish fallback.
+    try{
+      var rl=localStorage.getItem("retlix-lang");
+      if(!rl){var nl=(navigator.language||"es").slice(0,2).toLowerCase();rl=(nl==="it"||nl==="en"||nl==="es")?nl:"es";}
+      document.documentElement.lang=rl;
+      window.__retlixLang=rl;
+    }catch(e){window.__retlixLang="es";}
     // Pre-configure Xtream provider for direct streaming (no server needed)
     // Edit the line below with your own credentials before building:
     // try{if(!localStorage.getItem("retflix-provider"))localStorage.setItem("retflix-provider",JSON.stringify({url:"http://your-provider.com",username:"your_user",password:"your_pass"}))}catch(e){}
@@ -94,7 +102,7 @@ cat > "$OUT/index.html" << HTMLEOF
     <div style="width:320px;height:6px;background:#333;border-radius:6px;overflow:hidden;margin-top:48px">
       <div style="height:100%;background:#e50914;border-radius:6px;-webkit-animation:splbar 4s ease-in-out forwards;animation:splbar 4s ease-in-out forwards"></div>
     </div>
-    <div style="color:#888;font-size:28px;margin-top:24px">Caricamento…</div>
+    <div id="splash-msg" style="color:#888;font-size:28px;margin-top:24px">Cargando…</div>
   </div>
   <style>
     @-webkit-keyframes spl{0%{opacity:0;-webkit-transform:scale(.6)}30%{opacity:1;-webkit-transform:scale(1.05)}50%{-webkit-transform:scale(1)}100%{opacity:1;-webkit-transform:scale(1)}}
@@ -107,10 +115,16 @@ cat > "$OUT/index.html" << HTMLEOF
     // Register Samsung TV remote control keys
     document.addEventListener("DOMContentLoaded", function() {
       try {
+        var sm=document.getElementById("splash-msg");
+        var sl=window.__retlixLang||"es";
+        if(sm) sm.textContent=sl==="it"?"Caricamento…":(sl==="en"?"Loading…":"Cargando…");
+      } catch(e) {}
+      try {
         if (window.tizen && window.tizen.tvinputdevice) {
           var keys = ["MediaPlay","MediaPause","MediaPlayPause","MediaStop",
                        "MediaRewind","MediaFastForward","MediaTrackPrevious","MediaTrackNext",
                        "ColorF0Red","ColorF1Green","ColorF2Yellow","ColorF3Blue",
+                       "ChannelUp","ChannelDown","ChannelList","PreviousChannel",
                        "0","1","2","3","4","5","6","7","8","9"];
           for (var i = 0; i < keys.length; i++) {
             try { tizen.tvinputdevice.registerKey(keys[i]); } catch(e) {}

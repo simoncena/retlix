@@ -14,12 +14,14 @@ import Settings from './pages/Settings.jsx';
 import DetailTV from './pages/DetailTV.jsx';
 import { TvContext, detectTV, useSpatialNav } from './hooks/useTv.js';
 import { isConfigured as _xtreamDirect } from './xtreamTV.js';
+import { useI18n } from './i18n.js';
 // loadLibraryFromStorage removed — we download fresh on every startup
 
 const UIContext = createContext(null);
 export const useUI = () => useContext(UIContext);
 
 export default function App() {
+  const { t } = useI18n();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
@@ -33,7 +35,7 @@ export default function App() {
   useEffect(() => {
     if (isTV) document.documentElement.classList.add('tv');
     else document.documentElement.classList.remove('tv');
-  }, [isTV]);
+  }, [isTV, t]);
 
   // TV Splash: download playlist from provider on every startup
   // Updates the HTML splash message (visible before React mounts) then hides it
@@ -54,27 +56,27 @@ export default function App() {
       done++;
       setMsg(label + ' (' + done + '/3)');
       if (done >= 3) {
-        setMsg('Pronto!');
+        setMsg(t('Pronto!'));
         setTimeout(function() {
           if (splashEl) { splashEl.style.transition = 'opacity 0.4s'; splashEl.style.opacity = '0'; setTimeout(function(){ splashEl.style.display = 'none'; }, 400); }
           setSplashDone(true);
         }, 300);
       }
     }
-    setMsg('Scaricamento Film…');
+    setMsg(t('Scaricamento Film…'));
     api.content({ type: 'movie', category: '', sort: 'added', limit: 1, offset: 0 })
-      .then(function() { tick('Film ✓'); setMsg('Scaricamento Serie TV…'); })
-      .catch(function() { tick('Film'); })
+      .then(function() { tick(t('Film ✓')); setMsg(t('Scaricamento Serie TV…')); })
+      .catch(function() { tick(t('Film')); })
       .then(function() {
         return api.content({ type: 'series', category: '', sort: 'added', limit: 1, offset: 0 });
       })
-      .then(function() { tick('Serie TV ✓'); setMsg('Scaricamento Live TV…'); })
-      .catch(function() { tick('Serie'); })
+      .then(function() { tick(t('Serie TV ✓')); setMsg(t('Scaricamento Live TV…')); })
+      .catch(function() { tick(t('Serie')); })
       .then(function() {
         return api.content({ type: 'live', category: '', sort: 'name', limit: 1, offset: 0 });
       })
-      .then(function() { tick('Live TV ✓'); })
-      .catch(function() { tick('Live'); });
+      .then(function() { tick(t('Live TV ✓')); })
+      .catch(function() { tick(t('Live')); });
   }, [isTV]);
 
   const refreshStatus = useCallback(async () => {

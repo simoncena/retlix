@@ -60,8 +60,8 @@ export default function Search() {
     if (urlActor) return;
     const q = text.trim();
     clearTimeout(debRef.current);
-    var minLen = isTV ? 3 : 2;
-    var delay = isTV ? 800 : 220;
+    var minLen = 2;
+    var delay = isTV ? 500 : 220;
     if (q.length < minLen) { setSuggest({ titles: [], actors: [] }); setResults(null); setLoading(false); return; }
     let alive = true;
     setLoading(true);
@@ -175,13 +175,13 @@ export default function Search() {
           )}
 
           {r.movies && r.movies.length > 0 && (
-            <Row title={t('Film')} items={r.movies.slice(0, 10)} poster onItem={onItem} />
+            <Row title={t('Film')} items={r.movies} poster onItem={onItem} />
           )}
           {r.series && r.series.length > 0 && (
-            <Row title={t('Serie TV')} items={r.series.slice(0, 10)} poster onItem={onItem} />
+            <Row title={t('Serie TV')} items={r.series} poster onItem={onItem} />
           )}
           {r.live && r.live.length > 0 && (
-            <Row title={t('Live TV')} items={r.live.slice(0, 10)} onItem={onItem} />
+            <Row title={t('Live TV')} items={r.live} onItem={onItem} />
           )}
         </div>
       </div>

@@ -84,6 +84,22 @@ export default function Settings() {
         <h1 className="tv-settings-title">{t('Impostazioni')}</h1>
 
         <div className="tv-settings-section">
+          <h2>{t('Idioma de la interfaz')}</h2>
+          <div style={{ color: '#999', fontSize: 18, marginBottom: 16 }}>{t('Cambia el idioma de menús, botones y mensajes.')}</div>
+          <div className="language-buttons" data-focus-group>
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                className={'language-btn tv-language-btn' + (lang === l.code ? ' active' : '')}
+                onClick={() => setLang(l.code)}
+                data-focusable
+              >{l.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="tv-settings-section">
           <h2>{t('Provider')}</h2>
           <div className="tv-settings-info">
             <div><b>{t('Server:')}</b> {xp.url}</div>
@@ -137,10 +153,19 @@ export default function Settings() {
 
       <div style={{ maxWidth: 640 }}>
         <div className="setup-card" style={{ width: '100%', padding: 28, marginBottom: 18 }}>
-          <h3 style={{ marginTop: 0 }}>{t('Lingua')}</h3>
-          <select className="select" value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t('Lingua')} data-focusable>
-            {languages.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
+          <h3 style={{ marginTop: 0 }}>{t('Idioma de la interfaz')}</h3>
+          <div style={{ color: '#999', fontSize: 13, marginBottom: 12 }}>{t('Cambia el idioma de menús, botones y mensajes.')}</div>
+          <div className="language-buttons" data-focus-group>
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                className={'language-btn' + (lang === l.code ? ' active' : '')}
+                onClick={() => setLang(l.code)}
+                data-focusable
+              >{l.label}</button>
+            ))}
+          </div>
 
           <div className="tv-toggle">
             <input

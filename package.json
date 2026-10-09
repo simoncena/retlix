@@ -1,6 +1,6 @@
 {
   "name": "retlix",
-  "version": "1.0.0",
+  "version": "1.2.4",
   "private": true,
   "type": "module",
   "description": "Autonomous Netflix-style IPTV app powered by Xtream Codes",

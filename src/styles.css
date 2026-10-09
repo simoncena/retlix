@@ -319,6 +319,15 @@ img { display: block; }
 .field label { display: block; font-size: 13px; color: #bbb; margin-bottom: 6px; }
 .field input { width: 100%; padding: 12px 14px; border-radius: 4px; border: 1px solid #404040; background: #161616; color: #fff; font-size: 15px; outline: none; }
 .field input:focus { border-color: #888; }
+.password-field { position: relative; }
+.password-field input { padding-right: 52px; }
+.password-toggle {
+  position: absolute; right: 6px; top: 50%; -webkit-transform: translateY(-50%); transform: translateY(-50%);
+  width: 42px; height: 38px; border: 0; border-radius: 6px; background: transparent; color: #bbb;
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+  cursor: pointer;
+}
+.password-toggle:hover, .password-toggle:focus { color: #fff; background: #2a2a2a; outline: 2px solid #fff; }
 .setup .btn-red { width: 100%; justify-content: center; margin-top: 6px; font-size: 16px; padding: 13px; }
 .error-box { background: #5b1216; border: 1px solid #8a1c22; color: #ffd7d9; padding: 10px 14px; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
 .setup-tabs { display: flex; gap: 0; margin-bottom: 22px; border-radius: 6px; overflow: hidden; border: 1px solid #333; }
@@ -970,6 +979,9 @@ img { display: block; }
 .tv .field { margin-bottom: 22px; }
 .tv .field label { font-size: 22px; margin-bottom: 8px; }
 .tv .field input { font-size: 24px; padding: 16px 20px; border-radius: 6px; }
+.tv .password-field input { padding-right: 72px; }
+.tv .password-toggle { width: 58px; height: 48px; right: 8px; }
+.tv .password-toggle:focus { outline: 4px solid #fff; outline-offset: 2px; }
 .tv .sync-stage { font-size: 26px; }
 .tv .sync-msg { font-size: 22px; }
 .tv .sync-counts b { font-size: 34px; }
@@ -1119,3 +1131,105 @@ img { display: block; }
   opacity: 0; -webkit-animation: tvspinnershow 0.4s ease 0.5s forwards; animation: tvspinnershow 0.4s ease 0.5s forwards;
 }
 .tv .watch-status .spinner { width: 100px; height: 100px; border-width: 7px; opacity: 1; -webkit-animation: none; animation: none; }
+
+/* Retlix TV 1.0.1: live channel switching hints */
+.pl-live-channel { color:#ddd; font-size:20px; margin-left:18px; white-space:nowrap; }
+.pl-live-channel b { color:#fff; }
+.pl-live-hint { color:#999; font-size:18px; margin-left:18px; }
+
+/* Retlix 1.1.0 — TV-friendly interface language selector */
+.setup-language{margin:18px 0 8px;text-align:center}
+.setup-language-label{font-size:13px;color:#999;margin-bottom:10px}
+.language-buttons{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px}
+.setup-language .language-buttons{-webkit-justify-content:center;justify-content:center}
+.language-btn{background:#262626;color:#ddd;border:2px solid transparent;border-radius:7px;padding:10px 16px;font-size:15px;cursor:pointer}
+.language-btn.active{background:#e50914;color:#fff}
+.language-btn:focus{outline:none;border-color:#fff;-webkit-transform:scale(1.05);transform:scale(1.05)}
+.language-btn+.language-btn{margin-left:8px}
+.tv-language-btn{font-size:22px;padding:14px 24px;min-width:150px}
+
+
+/* ---------- Retlix 1.2: Samsung AVPlay ---------- */
+.watch .av-player {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  z-index: 401; background: #000; pointer-events: none;
+}
+.watch .hidden-player { visibility: hidden !important; width: 1px !important; height: 1px !important; position: absolute !important; left: -10px !important; top: -10px !important; }
+.pl-iconbtn.active { background: rgba(255,255,255,.16); border-radius: 8px; }
+.pl-track-label { font-size: 13px; white-space: nowrap; }
+.av-track-popover { max-height: 62vh; overflow-y: auto; }
+.av-track-popover .pl-pop-col { min-width: 210px; max-width: 330px; }
+.av-track-popover .pl-pop-col button { font-size: 18px; padding: 11px 14px; }
+.av-track-popover .pl-pop-col button:focus { outline: 3px solid #fff; outline-offset: 2px; background: #333; }
+.tv .av-track-popover { right: 5%; bottom: 115px; min-width: 620px; padding: 28px 34px; }
+.tv .av-track-popover .pl-pop-col { min-width: 260px; }
+.tv .av-track-popover .pl-pop-col h4 { font-size: 22px; margin-bottom: 14px; }
+.tv .av-track-popover .pl-pop-col button { font-size: 24px; padding: 15px 18px; }
+.tv .pl-track-label { font-size: 22px; }
+
+
+/* ---------- Retlix 1.2.1: subtitle overlay fallback for older Samsung TVs ---------- */
+.av-subtitle-overlay {
+  position: absolute;
+  left: 8%; right: 8%; bottom: 9%;
+  z-index: 408;
+  text-align: center;
+  pointer-events: none;
+  white-space: pre-line;
+}
+.av-subtitle-overlay span {
+  display: inline;
+  color: #fff;
+  background: rgba(0,0,0,.68);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 28px;
+  line-height: 1.32;
+  font-weight: 600;
+  text-shadow: 0 2px 4px #000, 0 0 3px #000;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.tv .av-subtitle-overlay { bottom: 10%; }
+.tv .av-subtitle-overlay span { font-size: 42px; padding: 8px 14px; line-height: 1.34; }
+
+/* ---------- Retlix 1.2.2: compact bottom-left transport controls ---------- */
+.pl-transport {
+  display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center;
+}
+.pl-transport > * + * { margin-left: 8px; }
+.transport-btn {
+  position: relative;
+  width: 46px; height: 46px;
+  padding: 0 !important;
+  border-radius: 50%;
+  background: rgba(0,0,0,.42);
+  -webkit-justify-content: center; justify-content: center;
+}
+.transport-btn:hover:not(:disabled), .transport-btn:focus {
+  background: rgba(255,255,255,.18);
+}
+.transport-play { background: rgba(255,255,255,.14); }
+.transport-ten {
+  position: absolute;
+  left: 50%; top: 50%;
+  -webkit-transform: translate(-50%,-50%); transform: translate(-50%,-50%);
+  font-size: 9px; font-weight: 800; line-height: 1;
+  pointer-events: none;
+}
+.pl-track-btn { white-space: nowrap; }
+
+.tv .pl-transport > * + * { margin-left: 14px; }
+.tv .transport-btn {
+  width: 64px; height: 64px;
+  background: rgba(0,0,0,.48);
+}
+.tv .transport-play {
+  width: 72px; height: 72px;
+  background: rgba(255,255,255,.15);
+}
+.tv .transport-btn svg { width: 30px; height: 30px; }
+.tv .transport-play svg { width: 34px; height: 34px; }
+.tv .transport-ten { font-size: 12px; }
+.tv .pl-controls { min-height: 74px; }

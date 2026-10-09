@@ -425,8 +425,8 @@ export var apiTV = {
   search: function(opts) {
     var q = (opts.q || '').toLowerCase();
     var actor = (opts.actor || '').toLowerCase();
-    if ((!q || q.length < 3) && !actor) return Promise.resolve({ movies: [], series: [], live: [] });
-    var max = 10;
+    if ((!q || q.length < 2) && !actor) return Promise.resolve({ movies: [], series: [], live: [] });
+    var max = 50;
     // Fast search using pre-built name index (no toLowerCase per item)
     function searchType(type) {
       var safe = getSafe(type);

@@ -3,16 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { api, getServerUrl } from '../api.js';
 import { useUI } from '../App.jsx';
 import { useI18n } from '../i18n.js';
-import { isConfigured as xtreamConfigured } from '../xtreamTV.js';
+import Icon from '../components/Icons.jsx';
+import {
+  isConfigured as xtreamConfigured,
+  saveProvider as saveXtreamProvider,
+  clearProvider as clearXtreamProvider,
+  xtreamApi
+} from '../xtreamTV.js';
 
 export default function Setup() {
   const { refreshStatus } = useUI();
-  const { t } = useI18n();
+  const { t, lang, setLang, languages } = useI18n();
   const navigate = useNavigate();
   const [mode, setMode] = useState('xtream'); // 'xtream' | 'm3u'
   const [form, setForm] = useState({ url: '', username: '', password: '', m3u_url: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [sync, setSync] = useState(null);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -45,15 +52,41 @@ export default function Setup() {
     try {
       if (mode === 'm3u') {
         await api.saveProvider({ type: 'm3u', m3u_url: form.m3u_url });
-      } else {
-        await api.saveProvider({ type: 'xtream', url: form.url, username: form.username, password: form.password });
+        startSync();
+        return;
       }
-      // Direct/TV mode: no sync needed, data fetched on-demand from provider
-      if (xtreamConfigured()) {
+
+      var tvStandalone = false;
+      try {
+        tvStandalone = localStorage.getItem('retlix_tv') === '1';
+      } catch (e) {}
+
+      if (tvStandalone) {
+        // Samsung TV: save Xtream credentials locally FIRST.
+        // This activates apiTV and avoids the Retlix PC backend.
+        saveXtreamProvider(form.url, form.username, form.password);
+
+        try {
+          // Validate credentials directly against Xtream provider.
+          await xtreamApi.info();
+        } catch (err) {
+          clearXtreamProvider();
+          throw err;
+        }
+
         await refreshStatus();
         navigate('/');
         return;
       }
+
+      // Web/Desktop mode still uses Retlix backend.
+      await api.saveProvider({
+        type: 'xtream',
+        url: form.url,
+        username: form.username,
+        password: form.password
+      });
+
       startSync();
     } catch (err) {
       setError(err.message);
@@ -85,6 +118,22 @@ export default function Setup() {
     <div className="setup">
       <form className="setup-card" onSubmit={submit}>
         <div className="logo">RETFLIX</div>
+        <div className="setup-language" data-focus-group>
+          <div className="setup-language-label">{t('Idioma de la interfaz')}</div>
+          <div className="language-buttons">
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                className={'language-btn' + (lang === l.code ? ' active' : '')}
+                onClick={() => setLang(l.code)}
+                data-focusable
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="sub">{t('Collega la tua linea IPTV per iniziare')}</div>
 
         <div className="setup-tabs">
@@ -110,7 +159,26 @@ export default function Setup() {
             </div>
             <div className="field">
               <label>{t('Password')}</label>
-              <input type="password" placeholder={t('password')} value={form.password} onChange={set('password')} autoComplete="off" required />
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t('password')}
+                  value={form.password}
+                  onChange={set('password')}
+                  autoComplete="off"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  data-focusable
+                  aria-label={showPassword ? t('Ocultar contraseña') : t('Mostrar contraseña')}
+                  title={showPassword ? t('Ocultar contraseña') : t('Mostrar contraseña')}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={22} />
+                </button>
+              </div>
             </div>
           </>
         ) : (
